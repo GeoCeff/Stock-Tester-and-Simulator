@@ -2,6 +2,10 @@
 
 A comprehensive Streamlit-based quantitative trading platform with backtesting engine and interactive trading simulator. Analyze market data, backtest strategies, and practice manual trading with real-time feedback.
 
+## 🆕 Latest Update (March 27, 2026)
+- Repository successfully uploaded to GitHub
+- Ready for community contributions and feature enhancements
+
 ## ✨ New Features (v1.1.0)
 
 ### 🔍 Enhanced Stock Search & Discovery
