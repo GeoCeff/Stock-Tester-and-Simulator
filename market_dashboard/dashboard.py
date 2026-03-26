@@ -31,7 +31,7 @@ from modules.simulator import (
 # CONFIGURATION & CONSTANTS
 # ============================================================================
 
-st.set_page_config(layout="wide", page_title="Stock Backtester", page_icon="📊")
+st.set_page_config(layout="wide", page_title="Quant Market Analytics", page_icon="📊")
 
 TRADING_DAYS_PER_YEAR = 252
 HOURS_PER_TRADING_DAY = 6.5
@@ -331,11 +331,62 @@ def main():
     if 'backtest_cache' not in st.session_state:
         st.session_state.backtest_cache = {}
     
+    # Initialize welcome and preferences
+    if 'show_welcome' not in st.session_state:
+        st.session_state.show_welcome = True
+    if 'ui_mode' not in st.session_state:
+        st.session_state.ui_mode = 'simple'
+    if 'theme' not in st.session_state:
+        st.session_state.theme = 'dark'
+    if 'mode' not in st.session_state:
+        st.session_state.mode = 'backtesting'
+    
+    # Show welcome dashboard if needed
+    if st.session_state.show_welcome:
+        show_welcome_dashboard()
+        return  # Exit early to show only welcome screen
+    
     # ========================================================================
     # SIDEBAR
     # ========================================================================
     
-    st.sidebar.title("📊 Market Analytics")
+    st.sidebar.title("📊 Quant Market Analytics")
+    
+    # Theme and mode controls at top
+    with st.sidebar:
+        col1, col2 = st.columns(2)
+        with col1:
+            current_theme = st.session_state.get('theme', 'dark')
+            theme_options = ["🌙 Dark", "☀️ Light"]
+            theme_index = 0 if current_theme == 'dark' else 1
+            selected_theme = st.selectbox(
+                "Theme",
+                theme_options,
+                index=theme_index,
+                key="theme_selector",
+                help="Switch between dark and light themes"
+            )
+            st.session_state.theme = 'dark' if 'Dark' in selected_theme else 'light'
+        
+        with col2:
+            current_mode = st.session_state.get('ui_mode', 'simple')
+            mode_options = ["🎯 Simple", "⚙️ Expert"]
+            mode_index = 0 if current_mode == 'simple' else 1
+            selected_mode = st.selectbox(
+                "Mode",
+                mode_options,
+                index=mode_index,
+                key="mode_selector",
+                help="Simple: Guided | Expert: Full controls"
+            )
+            st.session_state.ui_mode = 'simple' if 'Simple' in selected_mode else 'expert'
+        
+        # Welcome screen toggle
+        if st.button("🏠 Welcome Screen", help="Return to welcome dashboard"):
+            st.session_state.show_welcome = True
+            st.rerun()
+        
+        st.sidebar.divider()
     
     with st.sidebar:
         # Stock search section
@@ -514,24 +565,25 @@ def main():
                     help="0=day, 1-5=swing, 20+=position"
                 )
             
-            # Advanced options
-            with st.expander("⚙️ Advanced Options", expanded=False):
-                transaction_fee = st.slider(
-                    "Transaction Fee (%)",
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=default_fee * 100,
-                    step=0.01,
-                    help="Per-trade cost"
-                ) / 100
-                
-                sharpe_mode = st.selectbox(
-                    "Sharpe Annualization",
-                    list(SHARPE_MODES.keys()),
-                )
-                sharpe_interval = SHARPE_MODES[sharpe_mode]
-            
-            if 'Advanced Options' not in locals():
+            # Advanced options (only in expert mode)
+            if st.session_state.ui_mode == 'expert':
+                with st.expander("⚙️ Advanced Options", expanded=False):
+                    transaction_fee = st.slider(
+                        "Transaction Fee (%)",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=default_fee * 100,
+                        step=0.01,
+                        help="Per-trade cost"
+                    ) / 100
+                    
+                    sharpe_mode = st.selectbox(
+                        "Sharpe Annualization",
+                        list(SHARPE_MODES.keys()),
+                    )
+                    sharpe_interval = SHARPE_MODES[sharpe_mode]
+            else:
+                # Simple mode defaults
                 transaction_fee = default_fee
                 sharpe_interval = "1d"
             
@@ -702,8 +754,8 @@ def main():
     # MAIN CONTENT
     # ========================================================================
     
-    st.title("📊 Stock Backtester")
-    st.markdown("*Analyze market data and backtest trading strategies*")
+    st.title("📊 Quant Market Analytics")
+    st.markdown("*Professional quantitative trading analysis and backtesting platform*")
     
     # Download data
     try:
@@ -1043,12 +1095,152 @@ def main():
     st.markdown(
         """
         <div style='text-align: center; color: gray; font-size: 12px;'>
-        📊 Stock Backtester v1.1 | Data from Yahoo Finance | Not financial advice
+        📊 Quant Market Analytics v1.1 | Data from Yahoo Finance | Not financial advice
         </div>
         """,
         unsafe_allow_html=True
     )
 
 
-if __name__ == "__main__":
-    main()
+# ============================================================================
+# WELCOME DASHBOARD
+# ============================================================================
+
+def show_welcome_dashboard():
+    """Display welcome screen with guided onboarding."""
+    
+    # Hero section
+    st.markdown("""
+    <div style='text-align: center; padding: 2rem 0;'>
+        <h1 style='color: #1f77b4; font-size: 3rem; margin-bottom: 0.5rem;'>📊 Quant Market Analytics</h1>
+        <p style='font-size: 1.2rem; color: #666; margin-bottom: 2rem;'>Professional quantitative trading analysis and backtesting platform</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Quick start options
+    st.markdown("### 🚀 Quick Start")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **📈 Backtesting Mode**
+        - Test trading strategies automatically
+        - Analyze historical performance
+        - Compare against buy-and-hold
+        """)
+        
+        if st.button("🎯 Start Backtesting", type="primary", use_container_width=True):
+            st.session_state.show_welcome = False
+            st.session_state.mode = "backtesting"
+            st.rerun()
+    
+    with col2:
+        st.markdown("""
+        **🎮 Trading Simulator**
+        - Practice manual trading
+        - Real-time P&L tracking
+        - Risk-free learning environment
+        """)
+        
+        if st.button("🎲 Start Simulator", type="primary", use_container_width=True):
+            st.session_state.show_welcome = False
+            st.session_state.mode = "simulator"
+            st.rerun()
+    
+    with col3:
+        st.markdown("""
+        **🔍 Stock Discovery**
+        - Search and analyze stocks
+        - Technical indicators
+        - Market correlation analysis
+        """)
+        
+        if st.button("🔎 Explore Stocks", type="primary", use_container_width=True):
+            st.session_state.show_welcome = False
+            st.session_state.mode = "analysis"
+            st.rerun()
+    
+    st.divider()
+    
+    # Features overview
+    st.markdown("### ✨ Key Features")
+    
+    features_col1, features_col2 = st.columns(2)
+    
+    with features_col1:
+        st.markdown("""
+        **🤖 Advanced Strategies**
+        - Moving Average Crossover
+        - RSI Mean-Reversion & Threshold
+        - Bollinger Bands Breakout
+        
+        **📊 Technical Analysis**
+        - Multiple timeframes (1m to 1d)
+        - 50+ technical indicators
+        - Interactive charts with Plotly
+        
+        **⚙️ Professional Tools**
+        - Sharpe ratio, max drawdown
+        - Win rate analysis
+        - Trade logging & export
+        """)
+    
+    with features_col2:
+        st.markdown("""
+        **🎮 Trading Simulator**
+        - Manual buy/sell orders
+        - Real-time portfolio tracking
+        - Performance metrics
+        
+        **📈 Risk Management**
+        - Position sizing options
+        - Transaction cost modeling
+        - Drawdown analysis
+        
+        **🔗 Market Analysis**
+        - Multi-asset correlation
+        - Sector analysis
+        - Popular stocks discovery
+        """)
+    
+    st.divider()
+    
+    # Settings
+    st.markdown("### ⚙️ Preferences")
+    
+    settings_col1, settings_col2, settings_col3 = st.columns(3)
+    
+    with settings_col1:
+        ui_mode = st.radio(
+            "Interface Mode",
+            ["Simple", "Expert"],
+            index=0,
+            help="Simple: Guided experience | Expert: Full controls"
+        )
+        st.session_state.ui_mode = ui_mode.lower()
+    
+    with settings_col2:
+        theme = st.radio(
+            "Theme",
+            ["Dark", "Light"],
+            index=0,
+            help="Chart and interface theme"
+        )
+        st.session_state.theme = theme.lower()
+    
+    with settings_col3:
+        if st.button("🔄 Reset All Settings", type="secondary"):
+            # Reset to defaults
+            st.session_state.clear()
+            st.rerun()
+    
+    # Skip option
+    st.divider()
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if st.button("⏭️ Skip Welcome - Go to Dashboard", type="secondary", use_container_width=True):
+            st.session_state.show_welcome = False
+            st.rerun()
+
+    # ========================================================================
