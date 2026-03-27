@@ -17,7 +17,9 @@ from modules.strategies import (
     MovingAverageCrossover, RSIStrategy, BollingerBandsStrategy, 
     buy_hold_equity
 )
-from modules.portfolio import sharpe_ratio, max_drawdown, win_rate
+from modules.portfolio import sharpe_ratio, max_drawdown, win_rate, portfolio_backtest, value_at_risk, conditional_value_at_risk, apply_stop_loss_take_profit
+from modules.optimizer import grid_search_strategy
+from modules.persistence import save_workspace, load_workspace
 from modules.stock_search import (
     search_stocks, get_stock_info, get_popular_stocks, 
     get_stock_categories, format_market_cap, format_price
@@ -492,10 +494,57 @@ def main():
         )
         
         is_simulator_mode = "Simulator" in mode
-        
+
+        st.subheader("🧩 Phase 2 Enhancements")
+        enable_portfolio = st.checkbox("Enable Portfolio Backtesting", value=False)
+        if enable_portfolio:
+            portfolio_weight_input = st.text_input(
+                "Portfolio Weights (symbol:weight,...)",
+                "AAPL:0.2,MSFT:0.2,NVDA:0.2,TSLA:0.2,SPY:0.2"
+            )
+            rebalance_period = st.selectbox("Rebalance Period", ["monthly", "weekly", "daily"], index=0)
+        else:
+            portfolio_weight_input = ""
+            rebalance_period = "monthly"
+
+        enable_risk = st.checkbox("Enable Risk Management Metrics", value=True)
+        with st.expander("Risk Management Settings", expanded=False):
+            stop_loss_pct = st.slider("Stop Loss (%)", min_value=0.0, max_value=20.0, value=5.0, step=0.5)
+            take_profit_pct = st.slider("Take Profit (%)", min_value=0.0, max_value=50.0, value=10.0, step=0.5)
+
+        enable_optimizer = st.checkbox("Enable Strategy Optimizer", value=False)
+        if enable_optimizer:
+            optimizer_strategy = st.selectbox(
+                "Optimizer Strategy",
+                [s for s in STRATEGY_OPTIONS if s != "None"]
+            )
+            optimizer_strat_hold = st.number_input("Optimizer Holding Period", min_value=0, max_value=50, value=2)
+            optimizer_strat_fee = st.slider("Optimizer Fee (%)", min_value=0.0, max_value=1.0, value=0.1, step=0.01) / 100
+        else:
+            optimizer_strategy = None
+
         st.sidebar.divider()
         
-        # Backtesting section
+        # Persistence options
+        st.markdown("### 💾 Workspace")
+        if st.button("Save Workspace"):
+            state = {
+                'ticker_input': st.session_state.ticker_input,
+                'mode': mode,
+                'strategy_name': st.session_state.get('strategy_name', ''),
+                'backtest_start': st.session_state.get('backtest_start', str(DEFAULT_START.date())),
+                'backtest_end': st.session_state.get('backtest_end', str(DEFAULT_END.date())),
+                'interval': st.session_state.get('interval', DEFAULT_INTERVAL)
+            }
+            save_workspace('workspace_state.json', state)
+            st.success('Workspace saved.')
+        if st.button("Load Workspace"):
+            state = load_workspace('workspace_state.json')
+            if state:
+                st.session_state.ticker_input = state.get('ticker_input', st.session_state.ticker_input)
+                st.session_state.mode = state.get('mode', st.session_state.mode)
+                st.success('Workspace loaded. Please rerun app.')
+
         if not is_simulator_mode:
             st.subheader("🤖 Backtesting")
             
@@ -828,11 +877,63 @@ def main():
     # ========================================================================
     # DISPLAY RESULTS
     # ========================================================================
-    
-    # Mode-specific results display
+
+    # Phase 2: Portfolio and risk analytics
+    if enable_risk and not is_simulator_mode:
+        st.subheader("📌 Risk Management Summary")
+        var_val = value_at_risk(returns, confidence=0.95)
+        cvar_val = conditional_value_at_risk(returns, confidence=0.95)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("VaR 95%", f"{var_val:.2%}")
+        with col2:
+            st.metric("CVaR 95%", f"{cvar_val:.2%}")
+        with col3:
+            st.metric("Total Volatility", f"{returns.std():.2%}")
+
+    if enable_portfolio and not is_simulator_mode:
+        st.subheader("📂 Portfolio Backtest")
+        try:
+            weights = {}
+            for item in portfolio_weight_input.split(','):
+                key, val = item.strip().split(':')
+                weights[key.strip().upper()] = float(val.strip())
+            # Only selected tickers
+            common_tickers = [t for t in tickers if t in weights]
+            if len(common_tickers) < 2:
+                st.warning('Need at least 2 portfolio tickers from weights input.')
+            else:
+                use_prices = data['Close'][common_tickers]
+                port_res = portfolio_backtest(use_prices, weights, rebalance=rebalance_period)
+
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Portfolio Return", f"{port_res['returns'].cumsum().iloc[-1]*100:.2f}%")
+                with col2:
+                    st.metric("Portfolio Sharpe", f"{port_res['sharpe_ratio']:.2f}")
+                with col3:
+                    st.metric("Portfolio Max Drawdown", f"{port_res['max_drawdown']:.2f}%")
+                with col4:
+                    st.metric("Portfolio Win Rate", f"{port_res['win_rate']:.1f}%")
+
+                port_fig = go.Figure()
+                port_fig.add_trace(go.Scatter(x=port_res['nav'].index, y=port_res['nav'].values, name='Portfolio NAV'))
+                st.plotly_chart(port_fig, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Portfolio backtest failed: {e}")
+
     if not is_simulator_mode:
         # Backtesting results
         if backtest_metrics is not None:
+            # apply stop/take profit to trade log if any
+            if backtest_result is not None and 'trades' in backtest_result:
+                backtest_result['trades'] = apply_stop_loss_take_profit(
+                    backtest_result['trades'],
+                    stop_loss=stop_loss_pct/100,
+                    take_profit=take_profit_pct/100
+                )
+
             st.divider()
             col1, col2 = st.columns([3, 1])
             
@@ -915,7 +1016,31 @@ def main():
                 )
             
             st.divider()
-    
+
+            # Phase 2: Strategy optimizer results
+            if enable_optimizer and optimizer_strategy and strategy_name != 'None':
+                st.subheader('🧪 Strategy Optimizer Results')
+                try:
+                    param_grid = [
+                        {'holding_period': h, 'position_type': 'fixed', 'fee_pct': optimizer_strat_fee}
+                        for h in [0, 1, 2, 5, 10]
+                    ]
+                    optimizer_res = grid_search_strategy(
+                        ticker_data['Close'] if 'ticker_data' in locals() else close,
+                        indicators if 'indicators' in locals() else compute_all_indicators(close),
+                        optimizer_strategy,
+                        param_grid,
+                        interval=interval
+                    )
+
+                    st.write('**Best optimizer config:**')
+                    st.json(optimizer_res['best'])
+                    st.write('**All tested cases:**')
+                    st.dataframe(optimizer_res['results'])
+
+                except Exception as e:
+                    st.error(f'Optimizer failed: {e}')
+
     # ========================================================================
     # CHARTS (Both modes)
     # ========================================================================
