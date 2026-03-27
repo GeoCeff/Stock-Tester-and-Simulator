@@ -1243,4 +1243,6 @@ def show_welcome_dashboard():
             st.session_state.show_welcome = False
             st.rerun()
 
-    # ========================================================================
+
+if __name__ == "__main__":
+    main()
