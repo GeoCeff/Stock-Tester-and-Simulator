@@ -1095,7 +1095,7 @@ def main():
     st.markdown(
         """
         <div style='text-align: center; color: gray; font-size: 12px;'>
-        📊 Quant Market Analytics v1.1 | Data from Yahoo Finance | Not financial advice
+        📊 Quant Market Analytics v1.1.1 | Data from Yahoo Finance | Not financial advice
         </div>
         """,
         unsafe_allow_html=True
@@ -1243,6 +1243,4 @@ def show_welcome_dashboard():
             st.session_state.show_welcome = False
             st.rerun()
 
-
-if __name__ == "__main__":
-    main()
+    # ========================================================================
