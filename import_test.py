@@ -1,0 +1,53 @@
+import sys
+import os
+
+# Add the modules directory to path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'market_dashboard'))
+
+def test_imports():
+    """Test importing all modules"""
+    try:
+        print("Testing imports...")
+
+        # Test data module
+        from modules import data
+        print("✅ data module imported")
+
+        # Test indicators module
+        from modules import indicators
+        print("✅ indicators module imported")
+
+        # Test strategies module
+        from modules import strategies
+        print("✅ strategies module imported")
+
+        # Test portfolio module
+        from modules import portfolio
+        print("✅ portfolio module imported")
+
+        # Test simulator module
+        from modules import simulator
+        print("✅ simulator module imported")
+
+        # Test other modules
+        from modules import utils
+        print("✅ utils module imported")
+
+        from modules import optimizer
+        print("✅ optimizer module imported")
+
+        from modules import persistence
+        print("✅ persistence module imported")
+
+        from modules import stock_search
+        print("✅ stock_search module imported")
+
+        print("All modules imported successfully!")
+
+    except Exception as e:
+        print(f"❌ Import error: {e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    test_imports()

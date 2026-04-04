@@ -39,18 +39,39 @@ def sharpe_ratio(returns, interval="1d", risk_free_rate=0.02):
     excess_return = returns.mean() - (risk_free_rate / periods)
     std_dev = returns.std()
     
-    if std_dev > 0:
-        return (excess_return / std_dev) * np.sqrt(periods)
-    else:
-        return 0
+    # Check for valid standard deviation (not NaN, not zero)
+    if pd.isna(std_dev) or std_dev <= 0:
+        return 0.0
+    
+    return (excess_return / std_dev) * np.sqrt(periods)
 
 
 def max_drawdown(price):
-
+    """
+    Calculate maximum drawdown with proper error handling.
+    
+    Parameters:
+    -----------
+    price : pd.Series
+        Price series.
+    
+    Returns:
+    -----------
+    float
+        Maximum drawdown as percentage.
+    """
+    if price.empty or price.isna().all():
+        return 0.0
+    
     rolling_max = price.cummax()
-
-    drawdown = price / rolling_max - 1
-
+    
+    # Avoid division by zero
+    with np.errstate(divide='ignore', invalid='ignore'):
+        drawdown = price / rolling_max - 1
+    
+    # Handle any remaining NaN or inf values
+    drawdown = drawdown.replace([np.inf, -np.inf], np.nan).fillna(0)
+    
     return drawdown.min()
 
 
@@ -78,42 +99,91 @@ def win_rate(daily_returns):
 
 
 def portfolio_backtest(prices, weights, rebalance='monthly'):
-    """Simulate portfolio backtest with periodic rebalancing."""
-    prices = prices.copy().dropna(how='all')
-    returns = prices.pct_change().fillna(0)
+    """
+    Simulate portfolio backtest with periodic rebalancing.
 
-    if isinstance(weights, dict):
-        weights = np.array([weights.get(t, 0) for t in prices.columns])
-    else:
-        weights = np.array(weights)
+    Args:
+        prices: DataFrame with price data
+        weights: Dictionary or array of weights
+        rebalance: Rebalancing frequency ('monthly', 'weekly', 'daily')
 
-    if not np.isclose(weights.sum(), 1.0):
-        weights = weights / weights.sum()
+    Returns:
+        Dictionary with backtest results
+    """
+    try:
+        # Input validation
+        if not isinstance(prices, pd.DataFrame):
+            raise ValueError("Prices must be a pandas DataFrame")
 
-    nav = pd.Series(1.0, index=prices.index)
-    holdings = weights.copy()
+        if prices.empty:
+            raise ValueError("Prices DataFrame is empty")
 
-    for i in range(1, len(returns)):
-        nav.iloc[i] = nav.iloc[i - 1] * (1 + np.dot(returns.iloc[i], holdings))
+        prices = prices.copy().dropna(how='all')
 
-        # rebalance at period starts
-        if rebalance in ['monthly', 'weekly', 'daily']:
-            date = prices.index[i]
-            if rebalance == 'monthly' and date.day == 1:
-                holdings = weights
-            elif rebalance == 'weekly' and date.weekday() == 0:
-                holdings = weights
-            elif rebalance == 'daily':
-                holdings = weights
+        if prices.empty:
+            raise ValueError("No valid price data after dropping NaN values")
 
-    daily_returns = nav.pct_change().fillna(0)
-    return {
-        'nav': nav,
-        'returns': daily_returns,
-        'sharpe_ratio': sharpe_ratio(daily_returns, interval='1d'),
-        'max_drawdown': max_drawdown(nav),
-        'win_rate': win_rate(daily_returns)
-    }
+        returns = prices.pct_change().fillna(0)
+
+        if isinstance(weights, dict):
+            weights = np.array([weights.get(t, 0) for t in prices.columns])
+        else:
+            weights = np.array(weights)
+
+        # Validate weights
+        if len(weights) != len(prices.columns):
+            raise ValueError(f"Weights length ({len(weights)}) must match number of assets ({len(prices.columns)})")
+
+        # Normalize weights
+        total_weight = np.sum(weights)
+        if total_weight == 0:
+            raise ValueError("Total weight cannot be zero")
+
+        weights = weights / total_weight
+
+        nav = pd.Series(1.0, index=prices.index)
+        holdings = weights.copy()
+
+        for i in range(1, len(returns)):
+            nav.iloc[i] = nav.iloc[i - 1] * (1 + np.dot(returns.iloc[i], holdings))
+
+            # Rebalance at period starts
+            if rebalance in ['monthly', 'weekly', 'daily']:
+                date = prices.index[i]
+                should_rebalance = False
+
+                if rebalance == 'monthly' and date.day == 1:
+                    should_rebalance = True
+                elif rebalance == 'weekly' and date.weekday() == 0:  # Monday
+                    should_rebalance = True
+                elif rebalance == 'daily':
+                    should_rebalance = True
+
+                if should_rebalance:
+                    holdings = weights
+
+        daily_returns = nav.pct_change().fillna(0)
+
+        return {
+            'nav': nav,
+            'returns': daily_returns,
+            'sharpe_ratio': sharpe_ratio(daily_returns, interval='1d'),
+            'max_drawdown': max_drawdown(nav),
+            'win_rate': win_rate(daily_returns)
+        }
+
+    except Exception as e:
+        print(f"Error in portfolio_backtest: {e}")
+        # Return safe default values
+        empty_nav = pd.Series([1.0], index=prices.index[:1] if isinstance(prices, pd.DataFrame) and not prices.empty else pd.DatetimeIndex([]))
+        empty_returns = pd.Series(dtype=float)
+        return {
+            'nav': empty_nav,
+            'returns': empty_returns,
+            'sharpe_ratio': 0.0,
+            'max_drawdown': 0.0,
+            'win_rate': 0.0
+        }
 
 
 def value_at_risk(returns, confidence=0.95):

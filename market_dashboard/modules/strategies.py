@@ -70,96 +70,134 @@ class Strategy(ABC):
             - 'exits': pd.Series (exit dates, 0 if no exit)
             - 'trades': list of (entry_date, entry_price, exit_date, exit_price, return%)
         """
-        df = pd.DataFrame({
-            'close': close,
-            'signal': signals
-        })
+        try:
+            # Input validation
+            if not isinstance(signals, pd.Series) or not isinstance(close, pd.Series):
+                raise ValueError("Signals and close must be pandas Series")
 
-        # Track position entry date (to enforce holding period)
-        entry_dates = pd.Series(0, index=df.index, dtype=int)
-        position = pd.Series(0.0, index=df.index)
-        entries = pd.Series(0.0, index=df.index)
-        exits = pd.Series(0.0, index=df.index)
-        trades = []
+            if len(signals) != len(close):
+                raise ValueError("Signals and close series must have same length")
 
-        for i in range(len(df)):
-            # Decrement days in position
-            if i > 0 and entry_dates.iloc[i - 1] > 0:
-                entry_dates.iloc[i] = entry_dates.iloc[i - 1] + 1
+            if len(signals) == 0:
+                raise ValueError("Empty data provided")
 
-            # Auto-exit if holding period exceeded
-            if (self.holding_period > 0 and 
-                entry_dates.iloc[i] > self.holding_period and 
-                (i == 0 or position.iloc[i - 1] > 0)):
-                # Exit position due to holding period expiration
-                if i > 0 and position.iloc[i - 1] > 0:
-                    entry_idx = i - entry_dates.iloc[i] + 1
-                    exit_price = df['close'].iloc[i]
-                    entry_price = df['close'].iloc[entry_idx]
-                    exit_return = (exit_price / entry_price - 1) * 100
-                    trades.append({
-                        'entry_idx': entry_idx,
-                        'entry_date': df.index[entry_idx],
-                        'entry_price': entry_price,
-                        'exit_idx': i,
-                        'exit_date': df.index[i],
-                        'exit_price': exit_price,
-                        'return_pct': exit_return
-                    })
-                    exits.iloc[i] = 1.0
-                    position.iloc[i] = 0.0
-                    entry_dates.iloc[i] = 0
-                    continue
+            if initial_equity <= 0:
+                raise ValueError("Initial equity must be positive")
 
-            # New entry signal
-            if df['signal'].iloc[i] > 0 and (i == 0 or position.iloc[i - 1] == 0):
-                position.iloc[i] = df['signal'].iloc[i]
-                entries.iloc[i] = df['signal'].iloc[i]
-                entry_dates.iloc[i] = 1
-            elif i > 0 and position.iloc[i - 1] > 0:
-                # Hold position (if not expired)
-                if entry_dates.iloc[i] <= self.holding_period or self.holding_period == 0:
-                    position.iloc[i] = position.iloc[i - 1]
+            df = pd.DataFrame({
+                'close': close,
+                'signal': signals
+            })
 
-            # Exit signal (strategy says exit)
-            if df['signal'].iloc[i] == 0 and (i == 0 or position.iloc[i - 1] > 0):
-                if i > 0 and position.iloc[i - 1] > 0:
-                    entry_idx = i - entry_dates.iloc[i] + 1
-                    exit_price = df['close'].iloc[i]
-                    entry_price = df['close'].iloc[entry_idx]
-                    exit_return = (exit_price / entry_price - 1) * 100
-                    trades.append({
-                        'entry_idx': entry_idx,
-                        'entry_date': df.index[entry_idx],
-                        'entry_price': entry_price,
-                        'exit_idx': i,
-                        'exit_date': df.index[i],
-                        'exit_price': exit_price,
-                        'return_pct': exit_return
-                    })
-                    exits.iloc[i] = 1.0
-                    position.iloc[i] = 0.0
-                    entry_dates.iloc[i] = 0
+            # Track position entry date (to enforce holding period)
+            entry_dates = pd.Series(0, index=df.index, dtype=int)
+            position = pd.Series(0.0, index=df.index)
+            entries = pd.Series(0.0, index=df.index)
+            exits = pd.Series(0.0, index=df.index)
+            trades = []
 
-        # Compute daily returns based on position
-        price_returns = df['close'].pct_change()
-        daily_returns = position.shift(1) * price_returns
+            for i in range(len(df)):
+                # Decrement days in position
+                if i > 0 and entry_dates.iloc[i - 1] > 0:
+                    entry_dates.iloc[i] = entry_dates.iloc[i - 1] + 1
 
-        # Apply fees on trade days (entry/exit)
-        trade_days = (entries > 0) | (exits > 0)
-        daily_returns[trade_days] -= self.fee_pct
+                # Auto-exit if holding period exceeded
+                if (self.holding_period > 0 and
+                    entry_dates.iloc[i] > self.holding_period and
+                    (i == 0 or position.iloc[i - 1] > 0)):
+                    # Exit position due to holding period expiration
+                    if i > 0 and position.iloc[i - 1] > 0:
+                        entry_idx = i - entry_dates.iloc[i] + 1
+                        if entry_idx >= 0 and entry_idx < len(df):
+                            exit_price = df['close'].iloc[i]
+                            entry_price = df['close'].iloc[entry_idx]
+                            if entry_price > 0:
+                                exit_return = (exit_price / entry_price - 1) * 100
+                            else:
+                                exit_return = 0
+                            trades.append({
+                                'entry_idx': entry_idx,
+                                'entry_date': df.index[entry_idx],
+                                'entry_price': entry_price,
+                                'exit_idx': i,
+                                'exit_date': df.index[i],
+                                'exit_price': exit_price,
+                                'return_pct': exit_return
+                            })
+                            exits.iloc[i] = 1.0
+                            position.iloc[i] = 0.0
+                            entry_dates.iloc[i] = 0
+                            continue
 
-        # Compute equity curve
-        equity = initial_equity * (1 + daily_returns).cumprod()
+                # New entry signal
+                if df['signal'].iloc[i] > 0 and (i == 0 or position.iloc[i - 1] == 0):
+                    position.iloc[i] = df['signal'].iloc[i]
+                    entries.iloc[i] = df['signal'].iloc[i]
+                    entry_dates.iloc[i] = 1
+                elif i > 0 and position.iloc[i - 1] > 0:
+                    # Hold position (if not expired)
+                    if entry_dates.iloc[i] <= self.holding_period:
+                        position.iloc[i] = position.iloc[i - 1]
 
-        return {
-            'position': position,
-            'daily_return': daily_returns,
-            'equity': equity,
-            'entries': entries,
-            'exits': exits,
-            'trades': trades
-        }
+                # Exit signal (strategy says exit)
+                if df['signal'].iloc[i] == 0 and (i == 0 or position.iloc[i - 1] > 0):
+                    if i > 0 and position.iloc[i - 1] > 0:
+                        entry_idx = i - entry_dates.iloc[i] + 1
+                        if entry_idx >= 0 and entry_idx < len(df):
+                            exit_price = df['close'].iloc[i]
+                            entry_price = df['close'].iloc[entry_idx]
+                            if entry_price > 0:
+                                exit_return = (exit_price / entry_price - 1) * 100
+                            else:
+                                exit_return = 0
+                            trades.append({
+                                'entry_idx': entry_idx,
+                                'entry_date': df.index[entry_idx],
+                                'entry_price': entry_price,
+                                'exit_idx': i,
+                                'exit_date': df.index[i],
+                                'exit_price': exit_price,
+                                'return_pct': exit_return
+                            })
+                            exits.iloc[i] = 1.0
+                            position.iloc[i] = 0.0
+                            entry_dates.iloc[i] = 0
+
+            # Compute daily returns based on position
+            price_returns = df['close'].pct_change()
+            daily_returns = position.shift(1) * price_returns
+
+            # Apply fees on trade days (entry/exit)
+            trade_days = (entries > 0) | (exits > 0)
+            daily_returns[trade_days] -= self.fee_pct
+
+            # Fill NaN values (from pct_change and shift operations)
+            daily_returns = daily_returns.fillna(0)
+
+            # Compute equity curve
+            equity = initial_equity * (1 + daily_returns).cumprod()
+
+            return {
+                'position': position,
+                'daily_return': daily_returns,
+                'equity': equity,
+                'entries': entries,
+                'exits': exits,
+                'trades': trades
+            }
+
+        except Exception as e:
+            print(f"Error in compute_positions_and_equity: {e}")
+            # Return safe default values
+            empty_series = pd.Series(dtype=float, index=close.index if isinstance(close, pd.Series) else pd.DatetimeIndex([]))
+            return {
+                'position': empty_series,
+                'daily_return': empty_series,
+                'equity': pd.Series([initial_equity], index=close.index[:1] if isinstance(close, pd.Series) else pd.DatetimeIndex([])),
+                'entries': empty_series,
+                'exits': empty_series,
+                'trades': []
+            }
 
     def compute_metrics(self, equity_series, daily_returns, interval="1d", risk_free_rate=0.02):
         """
@@ -180,8 +218,14 @@ class Strategy(ABC):
         --------
         dict with keys: total_return, sharpe_ratio, max_drawdown, win_rate
         """
-        # Total return
-        total_return = (equity_series.iloc[-1] / equity_series.iloc[0] - 1) * 100
+        # Total return - handle division by zero
+        initial_value = equity_series.iloc[0]
+        final_value = equity_series.iloc[-1]
+        
+        if initial_value == 0 or pd.isna(initial_value):
+            total_return = 0.0
+        else:
+            total_return = (final_value / initial_value - 1) * 100
 
         # Annualization factor
         periods_per_year = {

@@ -37,37 +37,68 @@ class TradingSimulator:
         self.current_date = None
         self.current_price = None
 
-    def set_timeframe(self, data: pd.DataFrame, start_date: pd.Timestamp, end_date: pd.Timestamp):
+    def set_timeframe(self, data: pd.DataFrame, start_date, end_date):
         """
         Set the historical timeframe for simulation
 
         Args:
             data: OHLCV data for the stock
-            start_date: Start date for simulation
-            end_date: End date for simulation
+            start_date: Start date for simulation (date or Timestamp)
+            end_date: End date for simulation (date or Timestamp)
         """
-        self.data = data
-        self.start_date = start_date
-        self.end_date = end_date
+        try:
+            # Input validation
+            if not isinstance(data, pd.DataFrame):
+                raise ValueError("Data must be a pandas DataFrame")
 
-        # Filter data to timeframe
-        mask = (data.index >= start_date) & (data.index <= end_date)
-        self.sim_data = data[mask].copy()
+            if data.empty:
+                raise ValueError("Data DataFrame is empty")
 
-        if len(self.sim_data) == 0:
-            raise ValueError("No data available for the selected timeframe")
+            # Convert date objects to pd.Timestamp for proper comparison
+            self.start_date = pd.Timestamp(start_date)
+            self.end_date = pd.Timestamp(end_date)
 
-        # Set initial date and price
-        self.current_date = self.sim_data.index[0]
-        self.current_price = self.sim_data.iloc[0]['Close']
+            if self.start_date >= self.end_date:
+                raise ValueError("Start date must be before end date")
 
-        # Initialize equity history
-        self.equity_history = [{
-            'date': self.current_date,
-            'equity': self.initial_equity,
-            'cash': self.cash,
-            'positions_value': 0.0
-        }]
+            # Filter data to timeframe
+            mask = (data.index >= self.start_date) & (data.index <= self.end_date)
+            self.sim_data = data[mask].copy()
+
+            if len(self.sim_data) == 0:
+                raise ValueError("No data available for the selected timeframe")
+
+            # Validate required columns exist
+            required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            if isinstance(self.sim_data.columns, pd.MultiIndex):
+                available_columns = self.sim_data.columns.get_level_values(1).unique()
+            else:
+                available_columns = self.sim_data.columns
+
+            missing_columns = [col for col in required_columns if col not in available_columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns: {missing_columns}")
+
+            # Set initial date and price - ensure scalar values
+            self.current_date = self.sim_data.index[0]
+            close_price = self.sim_data.iloc[0]['Close']
+            # Handle both single ticker and multi-ticker cases
+            if isinstance(close_price, pd.Series):
+                self.current_price = float(close_price.iloc[0])
+            else:
+                self.current_price = float(close_price)
+
+            # Initialize equity history
+            self.equity_history = [{
+                'date': self.current_date,
+                'equity': self.initial_equity,
+                'cash': self.cash,
+                'positions_value': 0.0
+            }]
+
+        except Exception as e:
+            print(f"Error setting timeframe: {e}")
+            raise
 
     def get_current_state(self) -> Dict:
         """
@@ -100,10 +131,14 @@ class TradingSimulator:
         Returns:
             Tuple of (can_buy, reason)
         """
-        cost = quantity * self.current_price * (1 + self.transaction_fee)
+        cost = float(quantity * self.current_price * (1 + self.transaction_fee))
+        try:
+            cash_available = float(self.cash)
+        except (TypeError, ValueError):
+            cash_available = 0.0
 
-        if self.cash < cost:
-            return False, f"Insufficient cash. Need ${cost:.2f}, have ${self.cash:.2f}"
+        if cash_available < cost:
+            return False, f"Insufficient cash. Need ${cost:.2f}, have ${cash_available:.2f}"
 
         if quantity <= 0:
             return False, "Quantity must be positive"
@@ -140,28 +175,33 @@ class TradingSimulator:
         Returns:
             True if successful, False otherwise
         """
-        can_buy, reason = self.can_buy(quantity)
-        if not can_buy:
+        try:
+            can_buy, reason = self.can_buy(quantity)
+            if not can_buy:
+                return False
+
+            cost = float(quantity * self.current_price * (1 + self.transaction_fee))
+
+            # Create position
+            position = {
+                'entry_date': self.current_date,
+                'entry_price': self.current_price,
+                'quantity': quantity,
+                'cost': cost,
+                'fee': cost - (quantity * self.current_price)
+            }
+
+            self.positions.append(position)
+            self.cash = float(self.cash) - cost
+
+            # Record in equity history
+            self._update_equity_history()
+
+            return True
+
+        except Exception as e:
+            print(f"Error executing buy order: {e}")
             return False
-
-        cost = quantity * self.current_price * (1 + self.transaction_fee)
-
-        # Create position
-        position = {
-            'entry_date': self.current_date,
-            'entry_price': self.current_price,
-            'quantity': quantity,
-            'cost': cost,
-            'fee': cost - (quantity * self.current_price)
-        }
-
-        self.positions.append(position)
-        self.cash -= cost
-
-        # Record in equity history
-        self._update_equity_history()
-
-        return True
 
     def execute_sell(self, quantity: int) -> bool:
         """
@@ -173,78 +213,90 @@ class TradingSimulator:
         Returns:
             True if successful, False otherwise
         """
-        can_sell, reason = self.can_sell(quantity)
-        if not can_sell:
+        try:
+            can_sell, reason = self.can_sell(quantity)
+            if not can_sell:
+                return False
+
+            shares_to_sell = quantity
+            total_proceeds = 0.0
+            total_cost_basis = 0.0
+
+            # Sell from positions (FIFO)
+            positions_to_remove = []
+            for i, pos in enumerate(self.positions):
+                if shares_to_sell <= 0:
+                    break
+
+                sell_quantity = min(shares_to_sell, pos['quantity'])
+                sell_proceeds = float(sell_quantity * self.current_price * (1 - self.transaction_fee))
+                sell_cost_basis = float((sell_quantity / pos['quantity']) * pos['cost'])
+
+                total_proceeds += sell_proceeds
+                total_cost_basis += sell_cost_basis
+
+                # Update or remove position
+                if sell_quantity >= pos['quantity']:
+                    positions_to_remove.append(i)
+                else:
+                    pos['quantity'] -= sell_quantity
+                    pos['cost'] -= sell_cost_basis
+
+                shares_to_sell -= sell_quantity
+
+            # Remove closed positions
+            for i in reversed(positions_to_remove):
+                del self.positions[i]
+
+            # Record trade
+            trade = {
+                'date': self.current_date,
+                'action': 'SELL',
+                'quantity': quantity,
+                'price': self.current_price,
+                'proceeds': total_proceeds,
+                'cost_basis': total_cost_basis,
+                'realized_pnl': total_proceeds - total_cost_basis,
+                'fee': quantity * self.current_price * self.transaction_fee
+            }
+
+            self.trades.append(trade)
+            self.cash = float(self.cash) + float(total_proceeds)
+
+            # Record in equity history
+            self._update_equity_history()
+
+            return True
+
+        except Exception as e:
+            print(f"Error executing sell order: {e}")
             return False
-
-        shares_to_sell = quantity
-        total_proceeds = 0
-        total_cost_basis = 0
-
-        # Sell from positions (FIFO)
-        positions_to_remove = []
-        for i, pos in enumerate(self.positions):
-            if shares_to_sell <= 0:
-                break
-
-            sell_quantity = min(shares_to_sell, pos['quantity'])
-            sell_proceeds = sell_quantity * self.current_price * (1 - self.transaction_fee)
-            sell_cost_basis = (sell_quantity / pos['quantity']) * pos['cost']
-
-            total_proceeds += sell_proceeds
-            total_cost_basis += sell_cost_basis
-
-            # Update or remove position
-            if sell_quantity >= pos['quantity']:
-                positions_to_remove.append(i)
-            else:
-                pos['quantity'] -= sell_quantity
-                pos['cost'] -= sell_cost_basis
-
-            shares_to_sell -= sell_quantity
-
-        # Remove closed positions
-        for i in reversed(positions_to_remove):
-            del self.positions[i]
-
-        # Record trade
-        trade = {
-            'date': self.current_date,
-            'action': 'SELL',
-            'quantity': quantity,
-            'price': self.current_price,
-            'proceeds': total_proceeds,
-            'cost_basis': total_cost_basis,
-            'realized_pnl': total_proceeds - total_cost_basis,
-            'fee': quantity * self.current_price * self.transaction_fee
-        }
-
-        self.trades.append(trade)
-        self.cash += total_proceeds
-
-        # Record in equity history
-        self._update_equity_history()
-
-        return True
 
     def advance_time(self, steps: int = 1) -> bool:
         """
         Advance simulation time by specified number of steps
 
         Args:
-            steps: Number of time steps to advance
+            steps: Number of time steps to advance (can be negative to go backwards)
 
         Returns:
             True if successful, False if end of data reached
         """
         current_idx = self.sim_data.index.get_loc(self.current_date)
 
-        if current_idx + steps >= len(self.sim_data):
-            return False  # End of data
-
         new_idx = current_idx + steps
+
+        # Check bounds
+        if new_idx < 0 or new_idx >= len(self.sim_data):
+            return False
+
         self.current_date = self.sim_data.index[new_idx]
-        self.current_price = self.sim_data.iloc[new_idx]['Close']
+        close_price = self.sim_data.iloc[new_idx]['Close']
+        # Handle both single ticker and multi-ticker cases
+        if isinstance(close_price, pd.Series):
+            self.current_price = float(close_price.iloc[0])
+        else:
+            self.current_price = float(close_price)
 
         # Update equity history
         self._update_equity_history()
@@ -265,7 +317,12 @@ class TradingSimulator:
             return False
 
         self.current_date = target_date
-        self.current_price = self.sim_data.loc[target_date, 'Close']
+        close_price = self.sim_data.loc[target_date, 'Close']
+        # Handle both single ticker and multi-ticker cases
+        if isinstance(close_price, pd.Series):
+            self.current_price = float(close_price.iloc[0])
+        else:
+            self.current_price = float(close_price)
 
         # Update equity history
         self._update_equity_history()
