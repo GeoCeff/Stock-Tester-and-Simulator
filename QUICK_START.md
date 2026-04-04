@@ -193,7 +193,7 @@ Hold Days:          [2]                ← 0=day, 1-5=swing, 20+=position
 
 ---
 
-## ✨ Release Notes (v1.1.1)
+## ✨ Release Notes (v1.1.2)
 
 ### New Features ✨
 - Session caching for instant parameter changes

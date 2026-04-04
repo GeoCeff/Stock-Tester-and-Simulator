@@ -33,7 +33,7 @@ from modules.simulator import (
 try:
     from . import __version__
 except ImportError:
-    __version__ = "1.0.0"
+    __version__ = "1.1.2"
 
 # ============================================================================
 # CONFIGURATION & CONSTANTS
@@ -1813,7 +1813,7 @@ def show_main_content_v2():
         st.markdown(
             """
             <div style='text-align: center; color: gray; font-size: 12px;'>
-            📊 Quant Market Analytics v1.1.1 | Data from Yahoo Finance | Not financial advice
+            📊 Quant Market Analytics v1.1.2 | Data from Yahoo Finance | Not financial advice
             </div>
             """,
             unsafe_allow_html=True

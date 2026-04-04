@@ -5,9 +5,9 @@ A comprehensive Streamlit-based quantitative trading platform with backtesting e
 ## 🆕 Latest Update (March 27, 2026)
 - Repository successfully uploaded to GitHub
 - Phase 1 welcome dashboard and UX enhancements added
-- Updated version metadata to v1.1.1
+- Updated version metadata to v1.1.2
 
-## ✨ New Features (v1.1.1)
+## ✨ New Features (v1.1.2)
 
 ### 🔍 Enhanced Stock Search & Discovery
 - **Smart Search**: Find stocks by company name or ticker symbol
@@ -371,7 +371,7 @@ For issues, questions, or feature requests, please create an issue on GitHub or 
 
 ---
 
-**Dashboard Version**: 1.0.0  
-**Last Updated**: March 2026  
+**Dashboard Version**: 1.1.2  
+**Last Updated**: April 2026  
 **Python**: 3.8+  
 **Streamlit**: 1.25+
