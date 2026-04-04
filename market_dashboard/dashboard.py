@@ -30,6 +30,11 @@ from modules.simulator import (
     reset_simulator
 )
 
+try:
+    from . import __version__
+except ImportError:
+    __version__ = "1.0.0"
+
 # ============================================================================
 # CONFIGURATION & CONSTANTS
 # ============================================================================
@@ -229,6 +234,9 @@ def display_trade_log(backtest_data, strategy_name):
     total_trades = len(trades)
     winning_trades = [t for t in trades if t.get('return_pct', 0) > 0]
     losing_trades = [t for t in trades if t.get('return_pct', 0) < 0]
+    
+    # Create columns for metrics
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         st.metric("Total Trades", total_trades)
@@ -2681,9 +2689,9 @@ def show_main_content_v2():
     # Footer
     st.divider()
     st.markdown(
-        """
+        f"""
         <div style='text-align: center; color: gray; font-size: 12px;'>
-        📊 Quant Market Analytics v1.1.1 | Data from Yahoo Finance | Not financial advice
+        📊 Quant Market Analytics v{__version__} | Data from Yahoo Finance | Not financial advice
         </div>
         """,
         unsafe_allow_html=True
