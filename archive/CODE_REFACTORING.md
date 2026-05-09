@@ -1,4 +1,4 @@
-# Code Refactoring Examples: Before & After
+﻿# Code Refactoring Examples: Before & After
 
 This document shows how to transform the current code to be more natural and less "AI-generated" while maintaining clarity.
 
@@ -35,11 +35,11 @@ strategy_name = st.sidebar.selectbox("Strategy", [...], index=0)
 
 ### AFTER (Refactored - Organized)
 ```python
-st.sidebar.title("📊 Market Analytics Dashboard")
+st.sidebar.title("≡ƒôè Market Analytics Dashboard")
 
 # === DATA SELECTION ===
 with st.sidebar.container():
-    st.subheader("📈 Data Selection")
+    st.subheader("≡ƒôê Data Selection")
     
     tickers_input = st.text_input("Ticker Symbols", "AAPL,MSFT,NVDA,TSLA,SPY")
     tickers = [t.strip().upper() for t in tickers_input.split(",")]
@@ -57,7 +57,7 @@ st.sidebar.divider()
 
 # === DISPLAY OPTIONS ===
 with st.sidebar.container():
-    st.subheader("👁️ Display Options")
+    st.subheader("≡ƒæü∩╕Å Display Options")
     show_price = st.toggle("Advanced Chart", value=True)
     show_drawdown = st.toggle("Drawdown", value=True)
     show_corr = st.toggle("Correlation Heatmap", value=True)
@@ -66,7 +66,7 @@ st.sidebar.divider()
 
 # === BACKTESTING ===
 with st.sidebar.container():
-    st.subheader("🤖 Backtesting")
+    st.subheader("≡ƒñû Backtesting")
     strategy_config = get_strategy_config()  # New function
 ```
 
@@ -190,7 +190,7 @@ if strategy_name and strategy_name != "None":
         backtest_data = extract_backtest_data(data, selected_ticker, backtest_start, backtest_end)
         
         if len(backtest_data) == 0:
-            st.error("❌ No data in selected date range. Try adjusting dates.")
+            st.error("Γ¥î No data in selected date range. Try adjusting dates.")
         else:
             indicators = compute_indicators_for_backtest(backtest_data["Close"])
             
@@ -206,9 +206,9 @@ if strategy_name and strategy_name != "None":
                               if k in ['total_return', 'sharpe_ratio', 'max_drawdown', 'win_rate']}
             
     except ValueError as e:
-        st.error(f"❌ {e}")
+        st.error(f"Γ¥î {e}")
     except Exception as e:
-        st.error(f"❌ Backtest failed: {e}. Please check your inputs.")
+        st.error(f"Γ¥î Backtest failed: {e}. Please check your inputs.")
 ```
 
 **Benefits**:
@@ -499,13 +499,13 @@ if backtest_metrics is not None:
 ```python
 def display_backtest_summary(metrics, strategy_name):
     """Show strategy performance metrics in a clean 4-column layout."""
-    st.subheader(f"📊 Strategy Performance: {strategy_name}")
+    st.subheader(f"≡ƒôè Strategy Performance: {strategy_name}")
     
     metric_specs = [
-        ("📈 Total Return", metrics['total_return'], ".2f", "%"),
-        ("⚖️ Sharpe Ratio", metrics['sharpe_ratio'], ".2f", ""),
-        ("📉 Max Drawdown", metrics['max_drawdown'], ".2f", "%"),
-        ("🎯 Win Rate", metrics['win_rate'], ".1f", "%"),
+        ("≡ƒôê Total Return", metrics['total_return'], ".2f", "%"),
+        ("ΓÜû∩╕Å Sharpe Ratio", metrics['sharpe_ratio'], ".2f", ""),
+        ("≡ƒôë Max Drawdown", metrics['max_drawdown'], ".2f", "%"),
+        ("≡ƒÄ» Win Rate", metrics['win_rate'], ".1f", "%"),
     ]
     
     cols = st.columns(4)
@@ -587,7 +587,7 @@ def display_results(backtest, strategy_name):
 
 # === MAIN ===
 if strategy_name and strategy_name != "None":
-    with st.spinner("⚙️ Running backtest..."):
+    with st.spinner("ΓÜÖ∩╕Å Running backtest..."):
         try:
             # Prepare data
             backtest_data = extract_backtest_data(data, selected_ticker, 
@@ -613,4 +613,4 @@ if strategy_name and strategy_name != "None":
                 st.write(f"Error details: {str(e)}")
 ```
 
-This is MUCH cleaner and more maintainable! 🎉
+This is MUCH cleaner and more maintainable! ≡ƒÄë

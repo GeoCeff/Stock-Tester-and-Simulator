@@ -1,4 +1,4 @@
-# Development Guide
+﻿# Development Guide
 
 ## Project Architecture
 
@@ -6,18 +6,18 @@
 
 ```
 [User Input (Sidebar)]
-    ↓
+    Γåô
 [Data Download (yfinance)]
-    ↓
+    Γåô
 [Indicator Calculation]
-    ↓
+    Γåô
 [Strategy Execution (if backtest enabled)]
-    ├─ Generate Signals
-    ├─ Compute Positions & Equity
-    └─ Calculate Metrics
-    ↓
+    Γö£ΓöÇ Generate Signals
+    Γö£ΓöÇ Compute Positions & Equity
+    ΓööΓöÇ Calculate Metrics
+    Γåô
 [Visualization (Plotly)]
-    ↓
+    Γåô
 [Display Dashboard]
 ```
 
@@ -42,10 +42,10 @@ download_data(tickers, start, end, interval)
 **Purpose**: Calculate technical indicators
 
 Functions:
-- `moving_averages(price)` → (MA50, MA200)
-- `rsi(close, period=14)` → RSI Series (0-100)
-- `macd(close)` → (MACD line, Signal line)
-- `bollinger(close)` → (Upper band, Lower band)
+- `moving_averages(price)` ΓåÆ (MA50, MA200)
+- `rsi(close, period=14)` ΓåÆ RSI Series (0-100)
+- `macd(close)` ΓåÆ (MACD line, Signal line)
+- `bollinger(close)` ΓåÆ (Upper band, Lower band)
 
 **Key Pattern**: All accept Series, return Series or tuple of Series
 **Multi-ticker handling**: Extract single ticker first, then pass to indicator
@@ -55,9 +55,9 @@ Functions:
 
 **Base Class: `Strategy` (Abstract)**
 - `__init__(holding_period, position_type, fee_pct)`
-- `generate_signals(price, indicators_dict)` → Signal Series (abstract)
-- `compute_positions_and_equity(signals, close, initial_equity)` → dict
-- `compute_metrics(equity_series, daily_returns, interval)` → dict
+- `generate_signals(price, indicators_dict)` ΓåÆ Signal Series (abstract)
+- `compute_positions_and_equity(signals, close, initial_equity)` ΓåÆ dict
+- `compute_metrics(equity_series, daily_returns, interval)` ΓåÆ dict
 
 **Architecture Pattern**:
 ```python
@@ -88,17 +88,17 @@ metrics = strategy.compute_metrics(results['equity'], results['daily_return'])
 **Purpose**: Portfolio metrics and performance analysis
 
 Functions:
-- `sharpe_ratio(returns, interval="1d", risk_free_rate=0.02)` → float
-- `win_rate(daily_returns)` → float (0-100%)
-- `max_drawdown(price)` → float
-- `portfolio_returns(returns, weights)` → Series
+- `sharpe_ratio(returns, interval="1d", risk_free_rate=0.02)` ΓåÆ float
+- `win_rate(daily_returns)` ΓåÆ float (0-100%)
+- `max_drawdown(price)` ΓåÆ float
+- `portfolio_returns(returns, weights)` ΓåÆ Series
 
 #### `modules/utils.py`
 **Purpose**: Utility functions
 
 Functions:
-- `compute_returns(close)` → pct_change() Series
-- `correlation_matrix(returns)` → correlation matrix
+- `compute_returns(close)` ΓåÆ pct_change() Series
+- `correlation_matrix(returns)` ΓåÆ correlation matrix
 
 #### `dashboard.py`
 **Purpose**: Main Streamlit UI and orchestration
@@ -223,11 +223,11 @@ else:
 All indicators operate on Series, not DataFrames:
 
 ```python
-# ✓ Correct
+# Γ£ô Correct
 price_series = df["Close"]
 ma50, ma200 = moving_averages(price_series)
 
-# ✗ Wrong
+# Γ£ù Wrong
 try_this = moving_averages(df[["Close"]])  # DataFrame, will fail
 ```
 
@@ -235,7 +235,7 @@ try_this = moving_averages(df[["Close"]])  # DataFrame, will fail
 Positions held from signal generation through holding period:
 
 ```python
-# Signal on day 1 → Position held days 1-2 (holding_period=2)
+# Signal on day 1 ΓåÆ Position held days 1-2 (holding_period=2)
 # Then auto-exit on day 3
 entry_date_idx = 0
 holding_period = 2

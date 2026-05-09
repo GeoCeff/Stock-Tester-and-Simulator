@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 
 # Add the modules directory to path
@@ -11,41 +11,41 @@ def test_imports():
 
         # Test data module
         from modules import data
-        print("✅ data module imported")
+        print("Γ£à data module imported")
 
         # Test indicators module
         from modules import indicators
-        print("✅ indicators module imported")
+        print("Γ£à indicators module imported")
 
         # Test strategies module
         from modules import strategies
-        print("✅ strategies module imported")
+        print("Γ£à strategies module imported")
 
         # Test portfolio module
         from modules import portfolio
-        print("✅ portfolio module imported")
+        print("Γ£à portfolio module imported")
 
         # Test simulator module
         from modules import simulator
-        print("✅ simulator module imported")
+        print("Γ£à simulator module imported")
 
         # Test other modules
         from modules import utils
-        print("✅ utils module imported")
+        print("Γ£à utils module imported")
 
         from modules import optimizer
-        print("✅ optimizer module imported")
+        print("Γ£à optimizer module imported")
 
         from modules import persistence
-        print("✅ persistence module imported")
+        print("Γ£à persistence module imported")
 
         from modules import stock_search
-        print("✅ stock_search module imported")
+        print("Γ£à stock_search module imported")
 
         print("All modules imported successfully!")
 
     except Exception as e:
-        print(f"❌ Import error: {e}")
+        print(f"Γ¥î Import error: {e}")
         import traceback
         traceback.print_exc()
 

@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to the Stock Backtester project will be documented in this file.
 
@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### Stock Search & Discovery 🔍
+#### Stock Search & Discovery ≡ƒöì
 - **Smart Stock Search**: Search by company name or ticker symbol with autocomplete
 - **Popular Stocks Browser**: Categorized collections (Tech, Financial, Healthcare, Consumer, Energy, Industrial, Communication, Materials)
 - **Quick Stock Selection**: One-click buttons for popular stocks with auto-fill
 - **Stock Information**: Detailed company data (sector, industry, market cap, current price, 52-week range)
 - **Session Persistence**: Selected stocks remembered across interactions
 
-#### Trading Simulator 🎮
+#### Trading Simulator ≡ƒÄ«
 - **Manual Trading Interface**: Buy/sell buttons with quantity controls and validation
 - **Real-time P&L Tracking**: Live equity, cash, positions, and unrealized gains/losses
 - **Time Navigation**: Advance through historical data day-by-day or 5-day jumps
@@ -26,8 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CSV Export**: Download complete trade history for external analysis
 - **Buy & Hold Comparison**: Benchmark manual performance against passive strategy
 
-#### Dual Mode Interface 🎯
-- **Mode Selection**: Toggle between "📊 Backtesting" and "🎮 Simulator" modes
+#### Dual Mode Interface ≡ƒÄ»
+- **Mode Selection**: Toggle between "≡ƒôè Backtesting" and "≡ƒÄ« Simulator" modes
 - **Context-Aware UI**: Different sidebar controls and main content for each mode
 - **Unified Data Pipeline**: Same market data and indicators used for both modes
 - **Seamless Switching**: Change modes without losing data or selections
@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Moving Averages (50 and 200-period)
   - RSI (14-period, customizable)
   - MACD with signal line
-  - Bollinger Bands (20-period MA, 2σ bands)
+  - Bollinger Bands (20-period MA, 2╧â bands)
 
 - **Visualizations**:
   - 5-row advanced chart (candlesticks, volume, MACD, RSI, equity curve)
@@ -123,17 +123,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 #### Supported Intervals
-- 1m (1-minute): 252 × 6.5 × 60 = 98,280 trading periods/year for Sharpe annualization
-- 5m (5-minute): 252 × 6.5 × 12 = 19,656 trading periods/year
-- 15m (15-minute): 252 × 6.5 × 4 = 6,552 trading periods/year
-- 1h (1-hour): 252 × 6.5 = 1,638 trading periods/year
+- 1m (1-minute): 252 ├ù 6.5 ├ù 60 = 98,280 trading periods/year for Sharpe annualization
+- 5m (5-minute): 252 ├ù 6.5 ├ù 12 = 19,656 trading periods/year
+- 15m (15-minute): 252 ├ù 6.5 ├ù 4 = 6,552 trading periods/year
+- 1h (1-hour): 252 ├ù 6.5 = 1,638 trading periods/year
 - 1d (1-day): 252 trading days/year
 
 #### Backtesting Logic
 - Signals generated with 1-day lookahead prevention (`.shift(1)`)
 - Positions auto-exit after holding period expires
 - Fees deducted on trade entry/exit days only
-- Equity curve uses compound returns: `initial_equity × (1 + daily_returns).cumprod()`
+- Equity curve uses compound returns: `initial_equity ├ù (1 + daily_returns).cumprod()`
 
 #### Strategy Guidelines
 - All strategies are long-only (no shorting)
@@ -206,9 +206,9 @@ Validated with:
 
 | Version | Release Date | Status |
 |---------|---|---|
-| 1.0.0 | 2026-03-26 | ✅ Stable |
-| 1.1.0 | TBD | 🔄 Planned |
-| 1.2.0 | TBD | 🔄 Planned |
+| 1.0.0 | 2026-03-26 | Γ£à Stable |
+| 1.1.0 | TBD | ≡ƒöä Planned |
+| 1.2.0 | TBD | ≡ƒöä Planned |
 
 ---
 
